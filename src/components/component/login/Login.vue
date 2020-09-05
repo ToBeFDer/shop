@@ -30,14 +30,16 @@
 </template>
 
 <script>
+// import axios from 'axios'
+// axios.defaults.baseURL = 'http://127.0.0.1:8888/api/private/v1/'
 export default {
   name: 'Login',
   data () {
     return {
       // 这是登录表单的数据绑定对象
       loginForm: {
-        username: 'zs',
-        password: '123'
+        username: 'admin',
+        password: '123456'
       },
       loginFormRules: {
         username: [
@@ -62,7 +64,13 @@ export default {
           this.$http.post('login', this.loginForm)
             .then((result) => {
               const { data: res } = result
+              if (res.meta.status !== 200) {
+                return this.$message.error('登陆失败')
+              }
+              this.$message.success('登录成功')
               console.log(res)
+              window.sessionStorage.setItem('token', res.data.token)
+              this.$router.push('/home')
             })
         }
       })
