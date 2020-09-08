@@ -5,6 +5,8 @@ Vue.use(VueRouter)
 
 const Login = () => import('components/component/login/Login.vue')
 const Home = () => import('views/home/Home')
+const Welcome = () => import('views/welcome/Welcome')
+const Users = () => import('views/users/Users')
 
 const routes = [
   {
@@ -17,7 +19,23 @@ const routes = [
   },
   {
     path: '/home',
-    component: Home
+    component: Home,
+    redirect: '/welcome',
+    children: [
+      // 子组件的地址是服务器规定的，因此这里必须和服务器保持一致
+      {
+        path: '/welcome',
+        component: Welcome
+      },
+      {
+        path: '/users',
+        component: Users
+      },
+      {
+        path: '/roles',
+        component: Welcome
+      }
+    ]
   }
 ]
 
