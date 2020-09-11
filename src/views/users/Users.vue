@@ -262,6 +262,7 @@ export default {
       }
     },
     handleSizeChange(newSize) {
+      // 自己会根据点击情况输入页面数据，不需单独输入数据
       this.queryInfo.pagesize = newSize
       this.getUserList()
     },
