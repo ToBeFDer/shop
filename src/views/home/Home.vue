@@ -68,6 +68,9 @@ export default {
       activePath: ''
     }
   },
+  watch: {
+    $route: 'getPath'
+  },
   created() {
     this.getMenuList()
     // console.log('我被调用了')
@@ -99,6 +102,10 @@ export default {
     saveNavState(activePath) {
       window.sessionStorage.setItem('activePath', activePath)
       this.activePath = activePath
+    },
+    getPath() {
+      console.log('this.$route.path', this.$route.path)
+      this.activePath = this.$route.path
     }
   }
 }

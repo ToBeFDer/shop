@@ -28,6 +28,9 @@ import {
   Select,
   Option,
   Cascader,
+  Alert,
+  Tabs,
+  TabPane,
   MessageBox
 } from 'element-ui'
 
@@ -58,6 +61,9 @@ Vue.use(Tree)
 Vue.use(Select)
 Vue.use(Option)
 Vue.use(Cascader)
+Vue.use(Alert)
+Vue.use(Tabs)
+Vue.use(TabPane)
 // 这里比较特殊，需要全局挂载
 Vue.prototype.$confirm = MessageBox.confirm
 // 这里是一个全局弹框提示消息的挂载，全局可以使用
