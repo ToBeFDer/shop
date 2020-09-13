@@ -104,8 +104,10 @@ export default {
       this.activePath = activePath
     },
     getPath() {
-      console.log('this.$route.path', this.$route.path)
-      this.activePath = this.$route.path
+      // 因为在商品列表页面，有一个添加商品按钮会将整个页面跳转到'/goods/add界面下'
+      // 为了保持高亮，只取其以/分隔后的第一个
+      console.log('this.$route.path', '/' + this.$route.path.split('/')[1])
+      this.activePath = '/' + this.$route.path.split('/')[1]
     }
   }
 }
