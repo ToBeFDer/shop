@@ -82,15 +82,43 @@
               <el-input v-model="item.attr_vals" ></el-input>
             </el-form-item>
           </el-tab-pane>
-          <el-tab-pane label="商品图片" name="3">商品图片</el-tab-pane>
-          <el-tab-pane label="商品内容" name="4">商品内容</el-tab-pane>
+          <el-tab-pane label="商品图片" name="3">
+<!--            action表示图片要上传到的后台API地址，不能写相对路径，否则就变成当前端口下的路径-->
+<!--            点击图片名称触发的事件-->
+<!--            但是这里直接发起的请求是失效的，返回的结果是无效的token，表明这里没有使用axios发起请求-->
+<!--            因此，为了能够拥有访问权限，我们还必须手动添加一个token-->
+            <el-upload
+              :action="uploadUrl"
+              :on-preview="handlePreview"
+              :on-remove="handleRemove"
+              :headers="headerObj"
+              :on-success="handleSuccess"
+              list-type="picture">
+              <el-button size="small" type="primary">点击上传</el-button>
+            </el-upload>
+          </el-tab-pane>
+          <el-tab-pane label="商品内容" name="4">
+<!--            富文本编辑器组件-->
+            <quill-editor
+              v-model="addForm.goods_introduce">
+            </quill-editor>
+            <el-button type="primary" class="btnAdd" @click="add">添加商品</el-button>
+          </el-tab-pane>
         </el-tabs>
       </el-form>
     </el-card>
+<!--    图片预览对话框-->
+    <el-dialog
+      title="图片预览"
+      :visible.sync="previewVisible"
+      width="50%">
+      <img :src="previewPath" alt="" class="previewImg">
+    </el-dialog>
   </div>
 </template>
 
 <script>
+import _ from 'lodash'
 export default {
   name: 'Add',
   data() {
@@ -103,7 +131,12 @@ export default {
         goods_number: 0,
         goods_weight: 0,
         // 商品所属的分类数组
-        goods_cat: []
+        goods_cat: [],
+        // 图片数组
+        pics: [],
+        // 商品详情的描述字段
+        goods_introduce: '',
+        attrs: []
       },
       addFormRules: {
         goods_name: [
@@ -135,7 +168,17 @@ export default {
       // 动态参数列表数据
       manyTableData: [],
       // 静态属性列表数据
-      onlyTableData: []
+      onlyTableData: [],
+      uploadUrl: 'http://127.0.0.1:8888/api/private/v1/upload',
+      // 因为上传请求并未使用axios，所以我们需要手动指定该字段
+      // 图片上传组件的headers请求头对象
+      headerObj: {
+        Authorization: window.sessionStorage.getItem('token')
+      },
+      // 预览图片的路径
+      previewPath: '',
+      // 是否显示图片预览对话框
+      previewVisible: false
     }
   },
   computed: {
@@ -209,9 +252,79 @@ export default {
           // res.data.forEach(item => {
           //   item.attr_vals = item.attr_vals.length === 0 ? [] : item.attr_vals.split(',')
           // })
+          // 要注意这里并没有对原数据进行split
           this.onlyTableData = res.data
         }
       }
+    },
+    // 处理图片预览效果
+    handlePreview(file) {
+      // console.log(file)
+      this.previewPath = file.response.data.url
+      this.previewVisible = true
+    },
+    // 处理移除图片操作
+    handleRemove(file) {
+      // 1. 获取将要删除的图片的临时路径
+      const filePath = file.response.data.tmp_path
+      // 2. 从pics数组中找到该图片的索引值
+      const i = this.addForm.pics.findIndex(x =>
+        x.pic === filePath
+      )
+      // 3. 调用splice方法，把图片信息对象从pics数组中移除
+      this.addForm.pics.splice(i, 1)
+      console.log(this.addForm)
+    },
+    // 图片上传成功时的处理函数
+    handleSuccess(response) {
+      // console.log(response)
+      // 1. p拼接得到一个图片信息对象
+      const info = { pic: response.data.tmp_path }
+      // 2. 将图片信息对象push到pics中
+      this.addForm.pics.push(info)
+      // console.log(this.addForm)
+    },
+    add() {
+      this.$refs.addFormRef.validate(async valid => {
+        if (!valid) {
+          return this.$message.error('请填写必要的表单项')
+        } else {
+          // 下面的代码存在一个问题，就是级联选择器也是绑定在这个属性上
+          // 一旦这里被修改成了字符串，级联选择器由于双向绑定这个数据，也会发生改变
+          // 但是由于级联选择器不能够读取字符串，因此这里会报错，要么独立出级联选择器的数据绑定，或者将对象进行深拷贝
+          // 实现深拷贝：使用lodash包，该包提供了一个深拷贝方法cloneDeep(obj)
+          const form = _.cloneDeep(this.addForm)
+          form.goods_cat = form.goods_cat.join(',')
+          console.log('manyTableData: ' + this.manyTableData)
+          console.log('onlyTableData: ' + this.onlyTableData)
+          // 处理动态参数和静态属性
+          this.manyTableData.forEach(item => {
+            const newInfo = {
+              attr_id: item.attr_id,
+              attr_value: item.attr_vals.join(',')
+            }
+            this.addForm.attrs.push(newInfo)
+          })
+          this.onlyTableData.forEach(item => {
+            const newInfo = {
+              attr_id: item.attr_id,
+              attr_value: item.attr_vals
+            }
+            this.addForm.attrs.push(newInfo)
+          })
+          form.attrs = this.addForm.attrs
+          console.log(form)
+          // 发起请求添加商品
+          // 商品的名称必须是唯一的
+          const { data: res } = await this.$http.post('goods', form)
+          if (res.meta.status !== 201) {
+            return this.$message.error('添加商品失败')
+          } else {
+            this.$message.success('添加商品成功！')
+            await this.$router.push('/goods')
+          }
+        }
+      })
     }
   }
 }
@@ -220,5 +333,11 @@ export default {
 <style lang="less" scoped>
 .el-checkbox{
   margin: 0 5px 0 0;// 上右下左
+}
+.previewImg{
+  width: 100%;
+}
+.btnAdd{
+  margin-top: 15px;
 }
 </style>
